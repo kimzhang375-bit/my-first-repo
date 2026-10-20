@@ -1,43 +1,22 @@
 ---
 name: file-reader
-description: 从微信 iLink 机器人收到的文件消息中下载、解密并解析文本（PDF/Word/txt），附带追问存档。适用于任何需要"让机器人读懂用户发来的文件"的场景。
+description: 【通用版】当用户发来文件（PDF/Word/文本）时：提取正文、总结要点、保留原文供追问。纯流程型，不带代码，无环境依赖，任何 AI 助手（ChatGPT / Gemini / Claude / Codex……）都能用。
 ---
 
-# File Reader Skill
+# File Reader（通用版）
 
-让微信机器人（iLink 协议）能读取用户发来的文件。
+**定位**：纯说明书技能，不带任何代码，任何 AI 助手都能用。
+**与专用版的区别**：`file-reader-wechat` 是微信机器人专用版，额外带下载解密的 Python 代码，
+依赖微信 iLink 协议，只能用在微信 iLink 机器人上。
 
-## 协议要点
+## 处理流程
 
-- 入站消息 `item_list[]` 的 `type`：1 文本 / 2 图片 / 3 语音 / **4 文件** / 5 视频
-- 文件消息结构：`item.file_item.media` 含 `aes_key`（base64，两种编码：16 字节原文或 32 字符 hex）与 `full_url`（CDN 下载地址）；`item.file_item.file_name` / `len`
-- CDN 文件用 **AES-128-ECB** 加密，PKCS7 填充
-
-## 用法
-
-```python
-from file_reader import download_media_item, extract_file_text
-
-# item 是入站消息 item_list 中的文件 item（type == 4）
-raw_bytes = download_media_item(item)          # 下载并解密 -> 原始字节
-text, pages = extract_file_text(raw_bytes, "讲义.pdf")  # 解析纯文本
-```
+1. 收到文件后，先确认文件名与格式；不支持的格式直接说明，不硬读
+2. 提取正文全文
+3. 用中文总结要点（300 字以内），结尾加一句："想细问哪部分直接问我"
+4. 保留原文全文，以备用户追问细节
+5. 扫描版 / 图片型 PDF（没有文字层）如实说明读不了，不要编造内容
 
 ## 支持的格式
 
-| 格式 | 解析方式 |
-|------|----------|
-| PDF | pypdf，按页提取 |
-| docx | python-docx，按段落提取 |
-| txt / md / csv / json / log | UTF-8 解码 |
-
-图片（type 2）暂不支持，语音（type 3）暂不支持。
-
-## 依赖
-
-```
-cryptography   # AES 解密
-pypdf          # PDF 解析
-python-docx    # Word 解析
-requests       # CDN 下载
-```
+PDF（含文字层）、Word（docx）、纯文本（txt / md / csv / json）
